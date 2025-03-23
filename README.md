@@ -2,6 +2,11 @@
 [![Actions Status][action-img]][action-url]
 [![PkgGoDev][pkg-go-dev-img]][pkg-go-dev-url]
 
+[action-img]: https://github.com/bcomnes/go-todo/actions/workflows/test.yml/badge.svg
+[action-url]: https://github.com/bcomnes/go-todo/actions/workflows/test.yml
+[pkg-go-dev-img]: https://pkg.go.dev/badge/github.com/bcomnes/go-todo
+[pkg-go-dev-url]: https://pkg.go.dev/github.com/bcomnes/go-todo
+
 A standard-library focused Go JSON API server example with PostgreSQL persistence, full CRUD, authentication, and test coverage.
 
 ## Install
@@ -75,8 +80,3 @@ See API docs on [PkgGoDev][pkg-go-dev-url].
 ## License
 
 MIT
-
-[action-img]: https://github.com/bcomnes/go-todo/workflows/test/badge.svg
-[action-url]: https://github.com/bcomnes/go-todo/actions
-[pkg-go-dev-img]: https://pkg.go.dev/badge/github.com/bcomnes/go-todo
-[pkg-go-dev-url]: https://pkg.go.dev/github.com/bcomnes/go-todo
