@@ -1,0 +1,55 @@
+name: tests
+
+on: [push]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+
+    # Environment variables for all steps in this job
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/go-todo?sslmode=disable
+      PORT: 8080
+
+    # Create PostgreSQL service container
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: go-todo
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        go: ['^1.24.1']
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: actions/setup-go@v3
+      with:
+        go-version: ${{ matrix.go }}
+        check-latest: true
+
+
+
+    # Create go-todo database and verify it exists
+    - name: Create and verify database
+      run: |
+        # Connect to default postgres database to create go-todo
+        PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE \"go-todo\";"
+        # Verify go-todo database exists
+        PGPASSWORD=postgres psql -h localhost -U postgres -c "\l" | grep go-todo
+
+    # Run your tests
+    - run: make all

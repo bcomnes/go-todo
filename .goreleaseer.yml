@@ -1,0 +1,10 @@
+project_name: go-todo
+builds:
+  - main: ./cmd/server
+    binary: go-todo
+archives:
+  - format: tar.gz
+release:
+  github:
+    owner: bcomnes
+    name: go-todo
