@@ -46,8 +46,7 @@ jobs:
     # Create go-todo database and verify it exists
     - name: Create and verify database
       run: |
-        # Verify go-todo database exists
-        PGPASSWORD=postgres psql -h localhost -U postgres -c "\l" | grep go-todo
+        PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -c "SELECT datname FROM pg_database WHERE datname = 'go-todo';"
 
     # Run your tests
     - run: make all
