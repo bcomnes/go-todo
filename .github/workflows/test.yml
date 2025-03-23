@@ -46,8 +46,6 @@ jobs:
     # Create go-todo database and verify it exists
     - name: Create and verify database
       run: |
-        # Connect to default postgres database to create go-todo
-        PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE \"go-todo\";"
         # Verify go-todo database exists
         PGPASSWORD=postgres psql -h localhost -U postgres -c "\l" | grep go-todo
 
