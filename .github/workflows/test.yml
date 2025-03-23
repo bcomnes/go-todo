@@ -48,5 +48,8 @@ jobs:
       run: |
         PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -c "SELECT datname FROM pg_database WHERE datname = 'go-todo';"
 
+    - name: Run migrations
+      run: make migrate-up
+
     # Run your tests
     - run: make all

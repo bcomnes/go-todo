@@ -1,3 +1,3 @@
 package version
 
-var GeneratedCommit = "d9d4daa89eb29f2b374a4c08a98e4dff371f3bc2"
+var GeneratedCommit = "c79ac2a6b2bc6ac197523c0d665ab984d6939e12"
