@@ -4,7 +4,7 @@ go 1.24.1
 
 require (
 	github.com/go-playground/validator/v10 v10.25.0
-	github.com/jackc/pgx/v5 v5.7.3
+	github.com/jackc/pgx/v5 v5.7.4
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
 )
