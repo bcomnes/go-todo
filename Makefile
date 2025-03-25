@@ -29,19 +29,23 @@ test: ## Run tests
 migrate-up: ## Run database migrations up (loads .env if present)
 	@set -o allexport; \
 	if [ -f .env ]; then source .env; fi; \
-	go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate \
-		-database "$$DATABASE_URL" \
-		-path ./internal/database/migrations \
-		up
+	go tool github.com/bcomnes/gostgrator/cmd/gostgrator-pg migrate \
+	    -conn "$$DATABASE_URL" \
+		-migration-pattern "./internal/database/migrations/*.sql" \
+		-to "max"
 
 migrate-down: ## Rollback the last migration (loads .env if present)
 	@set -o allexport; \
 	if [ -f .env ]; then source .env; fi; \
-	go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate \
-		-database "$$DATABASE_URL" \
-		-path ./internal/database/migrations \
+	go tool github.com/bcomnes/gostgrator/cmd/gostgrator-pg down \
+		-conn "$$DATABASE_URL" \
+		-migration-pattern "./internal/database/migrations/*.sql" \
 		down 1
 
 migrate-create: ## Create a new migration (usage: make migrate-create name=add_users)
-	go tool github.com/golang-migrate/migrate/v4/cmd/migrate \
-		create -ext sql -dir ./internal/database/migrations -seq $(name)
+	@set -o allexport; \
+	if [ -f .env ]; then source .env; fi; \
+	go tool github.com/bcomnes/gostgrator/cmd/gostgrator-pg new \
+		-mode "int" \
+		-migration-pattern "./internal/database/migrations/*.sql" \
+        -desc "$(name)"

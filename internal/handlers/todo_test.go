@@ -14,7 +14,7 @@ import (
 	"github.com/bcomnes/go-todo/internal/handlers"
 	"github.com/bcomnes/go-todo/internal/middleware"
 	"github.com/bcomnes/go-todo/internal/models"
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func TestTodoCRUD(t *testing.T) {
