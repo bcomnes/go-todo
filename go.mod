@@ -11,7 +11,7 @@ require (
 tool github.com/bcomnes/gostgrator/cmd/gostgrator-pg
 
 require (
-	github.com/bcomnes/gostgrator v0.0.0-20250331223129-817ae2b5bb37 // indirect
+	github.com/bcomnes/gostgrator v1.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
