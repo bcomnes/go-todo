@@ -3,7 +3,7 @@ module github.com/bcomnes/go-todo
 go 1.24.1
 
 require (
-	github.com/go-playground/validator/v10 v10.25.0
+	github.com/go-playground/validator/v10 v10.27.0
 	github.com/jackc/pgx/v5 v5.7.5
 	github.com/joho/godotenv v1.5.1
 )
