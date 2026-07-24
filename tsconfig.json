@@ -1,0 +1,15 @@
+{
+  "extends": "@voxpelli/tsconfig/node24.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": true,
+    "erasableSyntaxOnly": true,
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": true,
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": []
+  },
+  "include": ["pkg/web/**/*.ts"],
+  "exclude": ["node_modules", "pkg/web/dist"]
+}

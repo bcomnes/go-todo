@@ -1,0 +1,33 @@
+{{define "content" -}}
+<section class="auth-page" aria-labelledby="login-title">
+  <header>
+    <p class="eyebrow">Welcome back</p>
+    <h1 id="login-title">Log in</h1>
+    <p>Use your account email and password to continue.</p>
+  </header>
+  {{template "login-form" .}}
+</section>
+{{- end}}
+
+{{define "login-form" -}}
+<form id="login-form"
+  class="auth-form"
+  action="/login"
+  method="post"
+  hx-post="/login"
+  hx-target="this"
+  hx-swap="outerHTML">
+  {{if .Error}}<p class="message message-error" role="alert">{{.Error}}</p>{{end}}
+  {{if .Notice}}<p class="message message-notice" role="status">{{.Notice}}</p>{{end}}
+  <div>
+    <label for="login-email">Email</label>
+    <input id="login-email" name="email" type="email" value="{{.Email}}" autocomplete="email" required>
+  </div>
+  <div>
+    <label for="login-password">Password</label>
+    <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+  </div>
+  <button type="submit">Log in</button>
+  <p><small>Need an account? <a href="/register">Register</a>.</small></p>
+</form>
+{{- end}}

@@ -1,0 +1,38 @@
+{{define "content" -}}
+<section class="auth-page" aria-labelledby="register-title">
+  <header>
+    <p class="eyebrow">Get started</p>
+    <h1 id="register-title">Create an account</h1>
+    <p>Register to keep a private todo list tied to your account.</p>
+  </header>
+  {{template "register-form" .}}
+</section>
+{{- end}}
+
+{{define "register-form" -}}
+<form id="register-form"
+  class="auth-form"
+  action="/register"
+  method="post"
+  hx-post="/register"
+  hx-target="this"
+  hx-swap="outerHTML">
+  {{if .Error}}<p class="message message-error" role="alert">{{.Error}}</p>{{end}}
+  {{if .Notice}}<p class="message message-notice" role="status">{{.Notice}}</p>{{end}}
+  <div>
+    <label for="register-username">Username</label>
+    <input id="register-username" name="username" type="text" value="{{.Username}}" autocomplete="username" minlength="3" maxlength="100" required>
+  </div>
+  <div>
+    <label for="register-email">Email</label>
+    <input id="register-email" name="email" type="email" value="{{.Email}}" autocomplete="email" required>
+  </div>
+  <div>
+    <label for="register-password">Password</label>
+    <input id="register-password" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="72" required>
+    <small>Use at least 12 characters.</small>
+  </div>
+  <button type="submit">Create account</button>
+  <p><small>Already registered? <a href="/login">Log in</a>.</small></p>
+</form>
+{{- end}}

@@ -4,14 +4,12 @@ on: [push]
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
 
-    # Environment variables for all steps in this job
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/go_todo?sslmode=disable
-      PORT: 8080
+      SESSION_COOKIE_SECURE: false
 
-    # Create PostgreSQL service container
     services:
       postgres:
         image: postgres:17
@@ -21,35 +19,44 @@ jobs:
           POSTGRES_DB: go_todo
         ports:
           - 5432:5432
-        # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
 
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        go: ['^1.24.1']
-
     steps:
-    - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
 
-    - uses: actions/setup-go@v7
-      with:
-        go-version: ${{ matrix.go }}
-        check-latest: true
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.25.x'
+          check-latest: true
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.x'
+          cache: npm
 
+      - name: Install dependencies
+        run: make deps
 
-    # Create go-todo database and verify it exists
-    - name: Create and verify database
-      run: |
-        PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -c "SELECT datname FROM pg_database WHERE datname = 'go-todo';"
+      - name: Apply migrations
+        run: make migrate-up
 
-    - name: Run migrations
-      run: make migrate-up
+      - name: Verify rollback
+        run: |
+          make migrate-down
+          make migrate-down
 
-    # Run your tests
-    - run: make all
+      - name: Reapply migrations
+        run: make migrate-up
+
+      - name: Validate
+        run: make build test
+
+      - name: Verify generated files are current
+        run: |
+          git diff --exit-code -- go.mod go.sum package-lock.json pkg/web/dist/
+          git status --porcelain --untracked-files=all -- go.mod go.sum package-lock.json pkg/web/dist/ > /tmp/go-todo-generated-status
+          test ! -s /tmp/go-todo-generated-status

@@ -1,0 +1,35 @@
+{{define "content" -}}
+<section class="hero" aria-labelledby="landing-title">
+  <p class="eyebrow">Small tasks, clear progress</p>
+  <h1 id="landing-title">Keep your todos focused and close at hand.</h1>
+  <p>Create tasks, add the context you need, and update your list without leaving the page.</p>
+  {{if .CurrentUser}}
+    <p><a class="button-link" href="/todos">Open your todos</a></p>
+  {{else}}
+    <p><a class="button-link" href="/register">Create an account</a></p>
+  {{end}}
+</section>
+{{template "health-status" .}}
+{{- end}}
+
+{{define "health-status" -}}
+<section id="health-status"
+  class="status-card"
+  aria-labelledby="health-status-title"
+  aria-live="polite">
+  <header>
+    <h2 id="health-status-title">Service status</h2>
+    <button type="button"
+      class="quiet-button"
+      hx-get="/?fragment=health-status"
+      hx-target="#health-status"
+      hx-swap="outerHTML">Refresh</button>
+  </header>
+  <p class="status {{if .StatusOK}}status-ok{{else}}status-error{{end}}">
+    <span aria-hidden="true"></span>
+    <strong>{{if .Status}}{{.Status}}{{else}}Status unavailable{{end}}</strong>
+  </p>
+  {{if .Notice}}<p>{{.Notice}}</p>{{end}}
+  {{if .Error}}<p role="alert">{{.Error}}</p>{{end}}
+</section>
+{{- end}}

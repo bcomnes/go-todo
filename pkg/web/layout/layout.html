@@ -1,0 +1,40 @@
+{{define "layout" -}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{if .Title}}{{.Title}} · {{end}}go-todo</title>
+  <link rel="stylesheet" href="/assets/global.css">
+  <script type="module" src="/assets/global.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <nav aria-label="Primary navigation">
+      <a class="brand" href="/">go-todo</a>
+      <ul>
+        {{with .CurrentUser}}
+          <li><a href="/todos">Todos</a></li>
+          <li><a href="/account">Account</a></li>
+          <li>
+            <form class="nav-form" action="/logout" method="post" hx-post="/logout" hx-swap="none">
+              <button type="submit">Log out {{.Username}}</button>
+            </form>
+          </li>
+        {{else}}
+          <li><a href="/login">Log in</a></li>
+          <li><a href="/register">Register</a></li>
+        {{end}}
+      </ul>
+    </nav>
+  </header>
+  <main id="main-content">
+    {{template "content" .}}
+  </main>
+  <footer class="site-footer">
+    <p><small>A progressively enhanced todo app built with Go, PostgreSQL, HTMX, and mine.css.</small></p>
+  </footer>
+</body>
+</html>
+{{- end}}

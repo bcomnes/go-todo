@@ -1,0 +1,12 @@
+project_name: go-todo
+builds:
+  - main: ./cmd/server
+    binary: go-todo
+    ldflags:
+      - -s -w -X github.com/bcomnes/go-todo/pkg/version.Commit={{.Commit}}
+archives:
+  - format: tar.gz
+release:
+  github:
+    owner: bcomnes
+    name: go-todo

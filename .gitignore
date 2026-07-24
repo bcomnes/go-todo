@@ -1,4 +1,4 @@
 .gobincache
+.web-assets.stamp
 node_modules
-package-lock.json
 .env

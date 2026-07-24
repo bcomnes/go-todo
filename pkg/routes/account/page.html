@@ -1,0 +1,41 @@
+{{define "content" -}}
+<section class="account-page" aria-labelledby="account-title">
+  <header>
+    <p class="eyebrow">Your profile</p>
+    <h1 id="account-title">Account</h1>
+  </header>
+  {{template "account-card" .}}
+  <p><a class="button-link" href="/todos">Back to your todos</a></p>
+</section>
+{{- end}}
+
+{{define "account-card" -}}
+<article id="account-card"
+  class="account-card"
+  aria-labelledby="account-card-title">
+  <header>
+    <h2 id="account-card-title">Profile details</h2>
+    <button type="button"
+      class="quiet-button"
+      hx-get="/account?fragment=account-card"
+      hx-target="#account-card"
+      hx-swap="outerHTML">Refresh</button>
+  </header>
+  {{if .Error}}<p class="message message-error" role="alert">{{.Error}}</p>{{end}}
+  {{if .Notice}}<p class="message message-notice" role="status">{{.Notice}}</p>{{end}}
+  {{with .CurrentUser}}
+    <dl>
+      <div>
+        <dt>Username</dt>
+        <dd>{{.Username}}</dd>
+      </div>
+      <div>
+        <dt>Email</dt>
+        <dd>{{.Email}}</dd>
+      </div>
+    </dl>
+  {{else}}
+    <p role="alert">You must be logged in to view this account.</p>
+  {{end}}
+</article>
+{{- end}}

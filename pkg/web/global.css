@@ -1,0 +1,265 @@
+@layer mine, sidecar, app;
+
+@import "mine.css" layer(mine);
+@import "mine.css/dist/layout.css" layer(sidecar);
+
+@layer app {
+  :root {
+    --app-width: 72rem;
+    --app-accent: #2563eb;
+    --app-error: #b42318;
+    --app-ok: #15803d;
+    --app-border: color-mix(in srgb, currentColor 20%, transparent);
+    --app-muted-border: color-mix(in srgb, currentColor 12%, transparent);
+  }
+
+  body {
+    min-block-size: 100dvh;
+  }
+
+  .skip-link {
+    position: absolute;
+    inset-block-start: 0.5rem;
+    inset-inline-start: 0.5rem;
+    translate: 0 -200%;
+    z-index: 1;
+  }
+
+  .skip-link:focus {
+    translate: 0;
+  }
+
+  .site-header,
+  main,
+  .site-footer {
+    inline-size: min(100% - 2rem, var(--app-width));
+    margin-inline: auto;
+  }
+
+  .site-header nav,
+  .site-header ul,
+  .status-card > header,
+  .account-card > header,
+  .todo-list > header,
+  .todo-item > header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .site-header nav {
+    justify-content: space-between;
+    padding-block: 1rem;
+  }
+
+  .site-header ul {
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .brand {
+    font-weight: 700;
+  }
+
+  .nav-form,
+  .nav-form button,
+  .todo-item form {
+    margin: 0;
+  }
+
+  main {
+    padding-block: clamp(2rem, 7vw, 6rem);
+  }
+
+  .hero {
+    max-inline-size: 48rem;
+    margin-block-end: clamp(3rem, 8vw, 7rem);
+  }
+
+  .eyebrow {
+    color: var(--app-accent);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .button-link {
+    display: inline-block;
+    padding: 0.65rem 1rem;
+    border-radius: 0.35rem;
+    background: var(--app-accent);
+    color: white;
+    text-decoration: none;
+  }
+
+  .auth-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 30rem);
+    gap: clamp(2rem, 8vw, 7rem);
+    align-items: start;
+  }
+
+  .auth-form,
+  .status-card,
+  .account-card,
+  .todo-create-form,
+  .todo-item {
+    padding: clamp(1rem, 4vw, 2rem);
+    border: 1px solid var(--app-border);
+    border-radius: 0.5rem;
+  }
+
+  .auth-form > div + div,
+  .todo-form fieldset > div + div {
+    margin-block-start: 1rem;
+  }
+
+  .auth-form input,
+  .todo-form input,
+  .todo-form textarea {
+    inline-size: 100%;
+  }
+
+  .message-error {
+    color: var(--app-error);
+  }
+
+  .message-notice {
+    color: var(--app-ok);
+  }
+
+  .status-card > header,
+  .account-card > header,
+  .todo-list > header,
+  .todo-item > header {
+    justify-content: space-between;
+  }
+
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .status > span {
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .status-ok {
+    color: var(--app-ok);
+  }
+
+  .status-error {
+    color: var(--app-error);
+  }
+
+  .quiet-button {
+    margin: 0;
+    padding: 0.35rem 0.65rem;
+  }
+
+  .account-card dl > div {
+    display: grid;
+    grid-template-columns: minmax(6rem, 1fr) minmax(0, 2fr);
+    gap: 1rem;
+    padding-block: 0.75rem;
+    border-block-end: 1px solid var(--app-muted-border);
+  }
+
+  .account-card dt {
+    font-weight: 700;
+  }
+
+  .account-card dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .todos-page > header {
+    max-inline-size: 48rem;
+    margin-block-end: 2rem;
+  }
+
+  .todo-create-form {
+    max-inline-size: 48rem;
+    margin-block-end: 3rem;
+  }
+
+  .todo-form fieldset {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .todo-form legend {
+    margin-block-end: 1rem;
+    font-weight: 700;
+  }
+
+  .todo-list {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .todo-list > header {
+    border-block-end: 1px solid var(--app-muted-border);
+  }
+
+  .todo-list > header p,
+  .todo-item h3,
+  .todo-item h4,
+  .todo-status {
+    margin: 0;
+  }
+
+  .todo-item {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .todo-item[data-completed="true"] h3 {
+    opacity: 0.7;
+    text-decoration: line-through;
+  }
+
+  .todo-status {
+    color: var(--app-accent);
+    font-size: 0.875rem;
+    font-weight: 700;
+  }
+
+  .todo-edit-form {
+    padding-block: 1rem;
+    border-block: 1px solid var(--app-muted-border);
+  }
+
+  [aria-busy="true"] {
+    cursor: progress;
+    opacity: 0.7;
+  }
+
+  @media (max-width: 44rem) {
+    .site-header nav,
+    .auth-page {
+      display: block;
+    }
+
+    .site-header ul {
+      margin-block-start: 0.75rem;
+    }
+
+    .auth-form {
+      margin-block-start: 2rem;
+    }
+
+    .todo-list > header,
+    .todo-item > header {
+      align-items: start;
+    }
+  }
+}

@@ -1,3 +1,4 @@
+// Command server runs go-todo's server-rendered web application and JSON API.
 package main
 
 import (
@@ -5,94 +6,97 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"log/slog"
-
-	"github.com/bcomnes/go-todo/internal/config"
-	"github.com/bcomnes/go-todo/internal/database"
-	"github.com/bcomnes/go-todo/internal/handlers"
-	"github.com/bcomnes/go-todo/internal/middleware"
-	"github.com/bcomnes/go-todo/internal/version"
-)
-
-var (
-	host    = flag.String("host", "127.0.0.1", "Server host")
-	port    = flag.String("port", "8080", "Server port")
-	showVer = flag.Bool("version", false, "Show version and exit")
-	showHelp = flag.Bool("help", false, "Show help")
+	"github.com/bcomnes/go-todo/pkg/config"
+	"github.com/bcomnes/go-todo/pkg/database"
+	"github.com/bcomnes/go-todo/pkg/httpapi"
+	"github.com/bcomnes/go-todo/pkg/version"
 )
 
 func main() {
+	if err := run(); err != nil {
+		slog.Error("server stopped", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	hostFlag := flag.String("host", "", "server host override")
+	portFlag := flag.String("port", "", "server port override")
+	showVersion := flag.Bool("version", false, "show version and exit")
 	flag.Parse()
 
-	if *showHelp {
-		flag.Usage()
-		os.Exit(0)
+	if *showVersion {
+		info := version.Get()
+		fmt.Printf("Service: %s\nCommit: %s\n", info.Service, info.Commit)
+		return nil
 	}
 
-	if *showVer {
-		fmt.Printf("Service: go-todo\nCommit: %s\n", version.Get().Commit)
-		os.Exit(0)
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("load configuration: %w", err)
+	}
+	if *hostFlag != "" {
+		cfg.Host = *hostFlag
+	}
+	if *portFlag != "" {
+		cfg.Port = *portFlag
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	cfg := config.Load()
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-
-	db, err := database.Connect(cfg.DatabaseURL)
+	db, err := database.Connect(ctx, cfg.DatabaseURL)
 	if err != nil {
-		logger.Error("Database connection failed", "error", err)
-		os.Exit(1)
+		return err
 	}
 	defer db.Close()
 
-	mux := http.NewServeMux()
-
-	// Health check endpoint
-	mux.HandleFunc("GET /health", handlers.Health)
-	mux.HandleFunc("GET /", handlers.Root)
-
-	// User routes
-	mux.HandleFunc("POST /register", middleware.WithDB(db, handlers.RegisterUser))
-
-	// Auth routes
-	mux.HandleFunc("POST /login", middleware.WithDB(db, handlers.LoginUser))
-
-	// Todo routes
-	mux.HandleFunc("GET /todos", middleware.WithAuth(db, handlers.ListTodos))
-	mux.HandleFunc("POST /todos", middleware.WithAuth(db, handlers.CreateTodo))
-	mux.HandleFunc("GET /todos/{id}", middleware.WithAuth(db, handlers.GetTodo))
-	mux.HandleFunc("PATCH /todos/{id}", middleware.WithAuth(db, handlers.UpdateTodo))
-	mux.HandleFunc("DELETE /todos/{id}", middleware.WithAuth(db, handlers.DeleteTodo))
-
-	addr := *host + ":" + *port
-	server := &http.Server{
-		Addr:    addr,
-		Handler: mux,
+	api, err := httpapi.NewWithOptions(db, cfg.TokenTTL, httpapi.Options{
+		AllowInsecureCookies: !cfg.SecureCookie,
+	})
+	if err != nil {
+		return fmt.Errorf("initialize API: %w", err)
 	}
 
+	server := &http.Server{
+		Addr:              cfg.Host + ":" + cfg.Port,
+		Handler:           api.Handler(),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20,
+	}
+
+	serverErrors := make(chan error, 1)
 	go func() {
-		logger.Info("Starting server", "addr", server.Addr)
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Error("Server failed", "error", err)
-		}
+		logger.Info("starting server", "address", server.Addr)
+		serverErrors <- server.ListenAndServe()
 	}()
 
-	<-ctx.Done()
-	logger.Info("Shutdown initiated")
+	select {
+	case <-ctx.Done():
+		logger.Info("shutdown requested")
+	case err := <-serverErrors:
+		if !errors.Is(err, http.ErrServerClosed) {
+			return fmt.Errorf("serve HTTP: %w", err)
+		}
+		return nil
+	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		logger.Error("Shutdown error", "error", err)
+		return fmt.Errorf("shutdown HTTP server: %w", err)
 	}
-	logger.Info("Server gracefully stopped")
+	logger.Info("server stopped")
+	return nil
 }

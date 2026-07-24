@@ -1,0 +1,103 @@
+{{define "content" -}}
+<section class="todos-page" aria-labelledby="todos-title">
+  <header>
+    <p class="eyebrow">Your work</p>
+    <h1 id="todos-title">Todos</h1>
+    <p>Create tasks, keep useful context, and mark work complete.</p>
+  </header>
+
+  <form id="todo-create-form"
+    class="todo-form todo-create-form"
+    action="/todos"
+    method="post"
+    hx-post="/todos"
+    hx-target="#todo-list"
+    hx-swap="outerHTML">
+    <fieldset>
+      <legend>Create a todo</legend>
+      <div>
+        <label for="todo-create-task">Task</label>
+        <input id="todo-create-task" name="task" type="text" maxlength="500" required>
+      </div>
+      <div>
+        <label for="todo-create-note">Note <span>(optional)</span></label>
+        <textarea id="todo-create-note" name="note" maxlength="5000" rows="3"></textarea>
+      </div>
+      <button type="submit">Add todo</button>
+    </fieldset>
+  </form>
+
+  {{template "todo-list" .}}
+</section>
+{{- end}}
+
+{{define "todo-list" -}}
+<section id="todo-list" class="todo-list" aria-labelledby="todo-list-title" aria-live="polite">
+  <header>
+    <h2 id="todo-list-title">Todo list</h2>
+    <p>{{len .Todos}} shown</p>
+  </header>
+  {{if .Error}}<p class="message message-error" role="alert">{{.Error}}</p>{{end}}
+  {{if .Notice}}<p class="message message-notice" role="status">{{.Notice}}</p>{{end}}
+
+  {{range .Todos}}
+    <article id="todo-{{.ID}}" class="todo-item" data-completed="{{.Done}}" aria-labelledby="todo-title-{{.ID}}">
+      <header>
+        <h3 id="todo-title-{{.ID}}">{{.Task}}</h3>
+        {{if .Done}}
+          <p class="todo-status" role="status">Completed</p>
+        {{else}}
+          <p class="todo-status" role="status">Not completed</p>
+        {{end}}
+      </header>
+
+      <section aria-labelledby="todo-note-title-{{.ID}}">
+        <h4 id="todo-note-title-{{.ID}}">Note</h4>
+        {{with .Note}}<p>{{.}}</p>{{else}}<p><em>No note.</em></p>{{end}}
+      </section>
+
+      <form action="/todos/{{.ID}}/toggle"
+        method="post"
+        hx-post="/todos/{{.ID}}/toggle"
+        hx-target="#todo-list"
+        hx-swap="outerHTML">
+        {{if .Done}}
+          <button type="submit" aria-label="Mark {{.Task}} as not completed">Mark incomplete</button>
+        {{else}}
+          <button type="submit" aria-label="Mark {{.Task}} as completed">Mark complete</button>
+        {{end}}
+      </form>
+
+      <form class="todo-form todo-edit-form"
+        action="/todos/{{.ID}}"
+        method="post"
+        hx-post="/todos/{{.ID}}"
+        hx-target="#todo-list"
+        hx-swap="outerHTML">
+        <fieldset>
+          <legend>Edit todo</legend>
+          <div>
+            <label for="todo-task-{{.ID}}">Task</label>
+            <input id="todo-task-{{.ID}}" name="task" type="text" value="{{.Task}}" maxlength="500" required>
+          </div>
+          <div>
+            <label for="todo-note-{{.ID}}">Note <span>(optional)</span></label>
+            <textarea id="todo-note-{{.ID}}" name="note" maxlength="5000" rows="3">{{with .Note}}{{.}}{{end}}</textarea>
+          </div>
+          <button type="submit">Save changes</button>
+        </fieldset>
+      </form>
+
+      <form action="/todos/{{.ID}}/delete"
+        method="post"
+        hx-post="/todos/{{.ID}}/delete"
+        hx-target="#todo-list"
+        hx-swap="outerHTML">
+        <button type="submit" aria-label="Delete {{.Task}}">Delete</button>
+      </form>
+    </article>
+  {{else}}
+    <p role="status">No todos yet. Add your first task above.</p>
+  {{end}}
+</section>
+{{- end}}

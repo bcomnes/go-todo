@@ -1,0 +1,38 @@
+{
+  "name": "go-todo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A server-rendered Go todo application with HTMX and a JSON API.",
+  "homepage": "https://github.com/bcomnes/go-todo#readme",
+  "bugs": {
+    "url": "https://github.com/bcomnes/go-todo/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bcomnes/go-todo.git"
+  },
+  "license": "MIT",
+  "author": "Bret Comnes <bcomnes@gmail.com> (https://bret.io/)",
+  "type": "module",
+  "scripts": {
+    "build": "npm run build:js && npm run build:css",
+    "build:js": "esbuild pkg/web/global.client.ts --bundle --format=esm --minify --outfile=pkg/web/dist/global.js",
+    "build:css": "esbuild pkg/web/global.css --bundle --minify --outfile=pkg/web/dist/global.css",
+    "test": "npm run test:tsc && npm run build",
+    "test:tsc": "tsc --project tsconfig.json"
+  },
+  "devDependencies": {
+    "@voxpelli/tsconfig": "16.1.0",
+    "esbuild": "0.28.1",
+    "htmx.org": "2.0.8",
+    "mine.css": "11.0.7",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=22",
+    "npm": ">=10"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
+  }
+}
