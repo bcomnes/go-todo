@@ -25,8 +25,8 @@ web-typecheck: node_modules/.package-lock.json ## Type-check browser TypeScript.
 
 web-build: web-typecheck .web-assets.stamp ## Type-check and build browser assets with esbuild.
 
-dev: web-build ## Build assets and run the HTTP server (loads .env through the application).
-	go run ./cmd/server
+dev: web-build ## Run the HTTP server with automatic asset rebuilds and Go restarts.
+	go tool air -c .air.toml
 
 test: web-build ## Build assets and run tests.
 	go test -v ./...

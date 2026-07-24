@@ -55,8 +55,9 @@ type Credentials struct {
 	Password string
 }
 
-// LoginResult contains the public user and the one-time plaintext bearer token.
-type LoginResult struct {
+// AuthResult contains the public user and the one-time plaintext bearer token
+// returned after either registration or login.
+type AuthResult struct {
 	Token     string      `json:"token"`
 	TokenType string      `json:"token_type"`
 	ExpiresAt time.Time   `json:"expires_at"`
@@ -98,17 +99,25 @@ func New(db *sql.DB, tokenTTL time.Duration, options Options) (*Service, error) 
 	}, nil
 }
 
-// CreateUser hashes the password inside PostgreSQL and returns the public account.
-func (service *Service) CreateUser(ctx context.Context, registration Registration) (models.User, error) {
+// Register atomically creates an account and its first authenticated session.
+// PostgreSQL hashes the password; only a digest of the issued token secret is
+// persisted. A session-storage or commit failure rolls back the new account.
+func (service *Service) Register(ctx context.Context, registration Registration) (AuthResult, error) {
 	if err := service.acquireHashSlot(ctx); err != nil {
-		return models.User{}, fmt.Errorf("wait for password hashing: %w", err)
+		return AuthResult{}, fmt.Errorf("wait for password hashing: %w", err)
 	}
 	defer service.releaseHashSlot()
 
 	registration.Username = strings.TrimSpace(registration.Username)
 	registration.Email = strings.ToLower(strings.TrimSpace(registration.Email))
+	tx, err := service.db.BeginTx(ctx, nil)
+	if err != nil {
+		return AuthResult{}, fmt.Errorf("begin registration: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
 	var user models.User
-	err := service.db.QueryRowContext(ctx, `
+	err = tx.QueryRowContext(ctx, `
 		INSERT INTO public.users (username, email, password_hash)
 		VALUES ($1, $2, public.crypt($3, public.gen_salt('bf', 12)))
 		RETURNING id, username, email, created_at, updated_at
@@ -122,22 +131,30 @@ func (service *Service) CreateUser(ctx context.Context, registration Registratio
 	if err != nil {
 		var pgError *pgconn.PgError
 		if errors.As(err, &pgError) && pgError.Code == "23505" {
-			return models.User{}, ErrUserExists
+			return AuthResult{}, ErrUserExists
 		}
-		return models.User{}, fmt.Errorf("insert user: %w", err)
+		return AuthResult{}, fmt.Errorf("insert user: %w", err)
 	}
-	return user, nil
+
+	token, expiresAt, err := service.issueToken(ctx, tx, user.ID)
+	if err != nil {
+		return AuthResult{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return AuthResult{}, fmt.Errorf("commit registration: %w", err)
+	}
+	return newAuthResult(user, token, expiresAt), nil
 }
 
 // Login verifies a password with PostgreSQL and persists only a digest of the
 // new high-entropy token secret. The plaintext token is returned once.
-func (service *Service) Login(ctx context.Context, credentials Credentials) (LoginResult, error) {
+func (service *Service) Login(ctx context.Context, credentials Credentials) (AuthResult, error) {
 	credentials.Email = strings.ToLower(strings.TrimSpace(credentials.Email))
 	if credentials.Email == "" || credentials.Password == "" || len(credentials.Password) > security.MaxPasswordLen {
-		return LoginResult{}, ErrInvalidCredentials
+		return AuthResult{}, ErrInvalidCredentials
 	}
 	if err := service.acquireHashSlot(ctx); err != nil {
-		return LoginResult{}, fmt.Errorf("%w: wait for password verification: %w", ErrUnavailable, err)
+		return AuthResult{}, fmt.Errorf("%w: wait for password verification: %w", ErrUnavailable, err)
 	}
 	defer service.releaseHashSlot()
 
@@ -182,11 +199,11 @@ func (service *Service) Login(ctx context.Context, credentials Credentials) (Log
 		&passwordMatches,
 	)
 	if err != nil {
-		return LoginResult{}, fmt.Errorf("%w: query credentials: %v", ErrUnavailable, err)
+		return AuthResult{}, fmt.Errorf("%w: query credentials: %v", ErrUnavailable, err)
 	}
 	if !id.Valid || !username.Valid || !email.Valid || !createdAt.Valid || !updatedAt.Valid ||
 		!passwordMatches.Valid || !passwordMatches.Bool {
-		return LoginResult{}, ErrInvalidCredentials
+		return AuthResult{}, ErrInvalidCredentials
 	}
 	user := models.User{
 		ID:        id.Int64,
@@ -196,25 +213,40 @@ func (service *Service) Login(ctx context.Context, credentials Credentials) (Log
 		UpdatedAt: updatedAt.Time,
 	}
 
+	token, expiresAt, err := service.issueToken(ctx, service.db, user.ID)
+	if err != nil {
+		return AuthResult{}, err
+	}
+	return newAuthResult(user, token, expiresAt), nil
+}
+
+type tokenStore interface {
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+}
+
+func (service *Service) issueToken(ctx context.Context, store tokenStore, userID int64) (security.Token, time.Time, error) {
 	token, err := security.GenerateToken()
 	if err != nil {
-		return LoginResult{}, fmt.Errorf("%w: generate token: %v", ErrTokenCreation, err)
+		return security.Token{}, time.Time{}, fmt.Errorf("%w: generate token: %v", ErrTokenCreation, err)
 	}
 	expiresAt := time.Now().UTC().Add(service.tokenTTL)
-	_, err = service.db.ExecContext(ctx, `
+	_, err = store.ExecContext(ctx, `
 		INSERT INTO public.auth_tokens (id, user_id, token_hash, expires_at)
 		VALUES ($1, $2, public.digest($3, 'sha256'), $4)
-	`, token.ID, user.ID, token.Secret, expiresAt)
+	`, token.ID, userID, token.Secret, expiresAt)
 	if err != nil {
-		return LoginResult{}, fmt.Errorf("%w: store token: %v", ErrTokenCreation, err)
+		return security.Token{}, time.Time{}, fmt.Errorf("%w: store token: %v", ErrTokenCreation, err)
 	}
+	return token, expiresAt, nil
+}
 
-	return LoginResult{
+func newAuthResult(user models.User, token security.Token, expiresAt time.Time) AuthResult {
+	return AuthResult{
 		Token:     token.Plaintext,
 		TokenType: "Bearer",
 		ExpiresAt: expiresAt,
 		User:      user,
-	}, nil
+	}
 }
 
 // Authenticate verifies a plaintext opaque token against its PostgreSQL digest.

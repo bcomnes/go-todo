@@ -7,7 +7,7 @@ import (
 	"github.com/bcomnes/go-todo/pkg/models"
 )
 
-//go:embed layout.html
+//go:embed layout.gohtml
 var source string
 
 // Data contains values used by the shared document layout.

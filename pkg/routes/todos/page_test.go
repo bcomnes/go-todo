@@ -9,6 +9,21 @@ import (
 	"github.com/bcomnes/go-todo/pkg/models"
 )
 
+func TestTodoPageMarksCreateFormForSuccessfulReset(t *testing.T) {
+	page, err := newPage()
+	if err != nil {
+		t.Fatalf("newPage: %v", err)
+	}
+	var output bytes.Buffer
+	if err := page.RenderPage(&output, pageData{}); err != nil {
+		t.Fatalf("RenderPage: %v", err)
+	}
+	if html := output.String(); !strings.Contains(html, `id="todo-create-form"`) ||
+		!strings.Contains(html, `data-reset-on-success`) {
+		t.Fatal("todo create form is not marked to reset after a successful HTMX request")
+	}
+}
+
 func TestTodoListFragmentRendersRequiredControls(t *testing.T) {
 	page, err := newPage()
 	if err != nil {

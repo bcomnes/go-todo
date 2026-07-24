@@ -1,0 +1,38 @@
+#:schema https://json.schemastore.org/any.json
+
+root = "."
+tmp_dir = ".tmp"
+env_files = [".env"]
+
+[build]
+cmd = "go build -o ./.tmp/go-todo ./cmd/server"
+entrypoint = ["./.tmp/go-todo"]
+include_dir = ["cmd", "pkg"]
+include_ext = ["go", "html", "gohtml", "js", "css"]
+exclude_dir = ["node_modules", ".tmp"]
+exclude_regex = ["_test\\.go"]
+exclude_unchanged = true
+delay = 200
+stop_on_error = false
+send_interrupt = true
+kill_delay = 500000000
+
+[[build.rules]]
+name = "web-assets"
+cmd = "npm run build"
+include_file = ["pkg/web/global.client.ts", "pkg/web/global.css"]
+delay = 100
+
+[log]
+time = true
+
+[misc]
+clean_on_exit = true
+startup_banner = "go-todo development server"
+
+[screen]
+clear_on_rebuild = false
+keep_scroll = true
+
+[proxy]
+enabled = false

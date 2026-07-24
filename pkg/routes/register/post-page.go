@@ -27,7 +27,7 @@ func (routes *routes) postPage(w http.ResponseWriter, r *http.Request) {
 		routes.renderError(w, r, input, http.StatusBadRequest, err.Error())
 		return
 	}
-	_, err := routes.auth.CreateUser(r.Context(), auth.Registration{
+	result, err := routes.auth.Register(r.Context(), auth.Registration{
 		Username: input.Username,
 		Email:    input.Email,
 		Password: input.Password,
@@ -44,5 +44,6 @@ func (routes *routes) postPage(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	httpx.Redirect(w, r, "/login?registered=1")
+	routes.sessions.SetCookie(w, result.Token, result.ExpiresAt)
+	httpx.Redirect(w, r, "/todos")
 }

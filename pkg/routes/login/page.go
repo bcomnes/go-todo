@@ -9,7 +9,7 @@ import (
 	"github.com/bcomnes/go-todo/pkg/web/layout"
 )
 
-//go:embed page.html
+//go:embed page.gohtml
 var source string
 
 type pageData struct {

@@ -8,6 +8,7 @@ declare global {
 
 interface HtmxRequestDetail {
   elt?: Element
+  xhr?: XMLHttpRequest
 }
 
 interface HtmxBeforeSwapDetail {
@@ -18,8 +19,11 @@ interface HtmxBeforeSwapDetail {
 
 window.htmx = htmx
 
+const requestDetail = (event: Event): HtmxRequestDetail | undefined =>
+  (event as CustomEvent<HtmxRequestDetail>).detail
+
 const requestElement = (event: Event): Element | undefined =>
-  (event as CustomEvent<HtmxRequestDetail>).detail?.elt
+  requestDetail(event)?.elt
 
 document.addEventListener('htmx:beforeSwap', (event) => {
   const detail = (event as CustomEvent<HtmxBeforeSwapDetail>).detail
@@ -35,7 +39,20 @@ document.addEventListener('htmx:beforeRequest', (event) => {
 })
 
 document.addEventListener('htmx:afterRequest', (event) => {
-  requestElement(event)?.removeAttribute('aria-busy')
+  const detail = requestDetail(event)
+  const element = detail?.elt
+  element?.removeAttribute('aria-busy')
+
+  const status = detail?.xhr?.status
+  if (
+    element instanceof HTMLFormElement &&
+    element.hasAttribute('data-reset-on-success') &&
+    status !== undefined &&
+    status >= 200 &&
+    status < 300
+  ) {
+    element.reset()
+  }
 })
 
 document.addEventListener('htmx:sendError', (event) => {

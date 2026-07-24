@@ -22,7 +22,7 @@ TypeScript and CSS are compiled ahead of time by esbuild; the server never invok
 
 ## Requirements
 
-- Go 1.25 or newer
+- Go 1.26 or newer
 - Node.js 22 or newer and npm 10 or newer
 - PostgreSQL 17 (earlier supported PostgreSQL versions may also work)
 
@@ -37,11 +37,13 @@ make deps
 make migrate-up
 ```
 
-Build the frontend and start the server:
+Build the frontend and start the development server:
 
 ```console
 make dev
 ```
+
+`make dev` runs the project-pinned Air tool. Changes to Go files or embedded HTML rebuild and restart the server; changes to `pkg/web/global.client.ts` or `pkg/web/global.css` rebuild the esbuild assets first and then restart Go so the new embedded assets are served.
 
 Open <http://127.0.0.1:8080>.
 For local plain HTTP, keep `SESSION_COOKIE_SECURE=false`; deployments served over HTTPS should set it to `true` or omit it to use the secure default.
@@ -82,7 +84,7 @@ All data endpoints are explicitly prefixed with `/api`:
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| `POST` | `/api/register` | Create an account |
+| `POST` | `/api/register` | Create an account and return its bearer token |
 | `POST` | `/api/login` | Return an opaque bearer token |
 | `POST` | `/api/logout` | Revoke the current bearer token |
 | `GET` | `/api/account` | Return the authenticated user |
@@ -94,8 +96,9 @@ Send API credentials as `Authorization: Bearer <token>`.
 ## Authentication security
 
 Passwords are hashed and verified inside PostgreSQL with `pgcrypto`; plaintext passwords are never stored.
+Successful registration creates the account and its first session atomically, so browser users enter `/todos` immediately and API clients receive a bearer token in the registration response.
 Unknown-account login attempts still perform dummy Blowfish work to reduce account-existence timing differences.
-Expensive password and token hash operations are bounded in-process so they cannot consume the entire database pool.
+Expensive password-hashing operations are bounded in-process so they cannot consume the entire database pool.
 
 A login token has the form `gtd_<selector>.<secret>`.
 Only the non-secret selector and a SHA-256 digest of the random 256-bit secret are stored, allowing indexed lookup without retaining reusable token material, scanning every token digest, or spending password-hashing capacity on every authenticated request.

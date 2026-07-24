@@ -1,4 +1,5 @@
 .gobincache
+.tmp
 .web-assets.stamp
 node_modules
 .env

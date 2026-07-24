@@ -20,7 +20,7 @@ Each feature package has a `routes.go` file with an explicit `Register` function
 
 The root `routes.go` is the complete route manifest. Go route packages are registered explicitly rather than discovered from the filesystem, so missing registrations fail review visibly and imports remain compile-time checked.
 
-Page-owning packages keep `page.go` and `page.html` next to their handlers. A page template contains both its full-page `content` definition and any directly renderable HTMX fragments.
+Page-owning packages keep `page.go` and `page.gohtml` next to their handlers. A page template contains both its full-page `content` definition and any directly renderable HTMX fragments.
 
 Cross-feature integration tests live at the root of this tree. Tests concerning only one feature should live in that feature package.
 

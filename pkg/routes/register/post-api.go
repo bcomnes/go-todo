@@ -19,7 +19,7 @@ func (routes *routes) postAPI(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	user, err := routes.auth.CreateUser(r.Context(), auth.Registration{
+	result, err := routes.auth.Register(r.Context(), auth.Registration{
 		Username: input.Username,
 		Email:    input.Email,
 		Password: input.Password,
@@ -36,5 +36,5 @@ func (routes *routes) postAPI(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	httpx.WriteJSON(w, http.StatusCreated, user)
+	httpx.WriteJSON(w, http.StatusCreated, result)
 }

@@ -18,7 +18,7 @@ import (
 	"github.com/bcomnes/go-todo/pkg/models"
 )
 
-type todoIntegrationLoginResponse struct {
+type todoIntegrationAuthResponse struct {
 	Token string `json:"token"`
 }
 
@@ -50,8 +50,8 @@ func TestTodoLifecycle(t *testing.T) {
 		_, _ = db.Exec(`DELETE FROM public.users WHERE email IN ($1, $2)`, firstEmail, secondEmail)
 	})
 
-	firstToken := todoIntegrationRegisterAndLogin(t, handler, firstUsername, firstEmail, password)
-	secondToken := todoIntegrationRegisterAndLogin(t, handler, secondUsername, secondEmail, password)
+	firstToken := todoIntegrationRegister(t, handler, firstUsername, firstEmail, password)
+	secondToken := todoIntegrationRegister(t, handler, secondUsername, secondEmail, password)
 
 	initialNote := "Created through the JSON API"
 	createResponse := todoIntegrationJSONRequest(t, handler, http.MethodPost, "/api/todos", firstToken, map[string]any{
@@ -162,7 +162,7 @@ func TestTodoLifecycle(t *testing.T) {
 	todoIntegrationRequireStatus(t, getDeletedResponse, http.StatusNotFound, "get deleted todo")
 }
 
-func todoIntegrationRegisterAndLogin(t *testing.T, handler http.Handler, username, email, password string) string {
+func todoIntegrationRegister(t *testing.T, handler http.Handler, username, email, password string) string {
 	t.Helper()
 
 	registerResponse := todoIntegrationJSONRequest(t, handler, http.MethodPost, "/api/register", "", map[string]string{
@@ -171,18 +171,12 @@ func todoIntegrationRegisterAndLogin(t *testing.T, handler http.Handler, usernam
 		"password": password,
 	})
 	todoIntegrationRequireStatus(t, registerResponse, http.StatusCreated, "register user")
-
-	loginResponse := todoIntegrationJSONRequest(t, handler, http.MethodPost, "/api/login", "", map[string]string{
-		"email":    email,
-		"password": password,
-	})
-	todoIntegrationRequireStatus(t, loginResponse, http.StatusOK, "log in user")
-	var login todoIntegrationLoginResponse
-	todoIntegrationDecodeJSON(t, loginResponse, &login, "log in user")
-	if login.Token == "" {
-		t.Fatal("login returned an empty token")
+	var registration todoIntegrationAuthResponse
+	todoIntegrationDecodeJSON(t, registerResponse, &registration, "register user")
+	if registration.Token == "" {
+		t.Fatal("registration returned an empty token")
 	}
-	return login.Token
+	return registration.Token
 }
 
 func todoIntegrationBrowserLogin(t *testing.T, handler http.Handler, email, password string) *http.Cookie {

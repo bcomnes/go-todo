@@ -62,6 +62,23 @@ func TestAuthLifecycle(t *testing.T) {
 	if registerResponse.Code != http.StatusCreated {
 		t.Fatalf("register status = %d, body = %s", registerResponse.Code, registerResponse.Body.String())
 	}
+	if len(registerResponse.Result().Cookies()) != 0 {
+		t.Fatal("JSON registration unexpectedly set a browser session cookie")
+	}
+	var registrationAuth authResponse
+	if err := json.NewDecoder(registerResponse.Body).Decode(&registrationAuth); err != nil {
+		t.Fatalf("decode registration response: %v", err)
+	}
+	if registrationAuth.Token == "" || registrationAuth.User.Email != email {
+		t.Fatalf("registration auth response = %#v", registrationAuth)
+	}
+	registrationAccount := httptest.NewRequest(http.MethodGet, "/api/account", nil)
+	registrationAccount.Header.Set("Authorization", "Bearer "+registrationAuth.Token)
+	registrationAccountResponse := httptest.NewRecorder()
+	handler.ServeHTTP(registrationAccountResponse, registrationAccount)
+	if registrationAccountResponse.Code != http.StatusOK {
+		t.Fatalf("account with registration token status = %d, body = %s", registrationAccountResponse.Code, registrationAccountResponse.Body.String())
+	}
 
 	var passwordHash string
 	var passwordMatches bool
@@ -228,5 +245,68 @@ func TestAuthLifecycle(t *testing.T) {
 	}
 	if redirect := accountAfterBrowserLogoutResponse.Header().Get("HX-Redirect"); redirect != "/login" {
 		t.Fatalf("expired browser session redirect = %q, want /login", redirect)
+	}
+}
+
+func TestBrowserRegistrationStartsSession(t *testing.T) {
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("DATABASE_URL is not set")
+	}
+
+	db, err := database.Connect(context.Background(), databaseURL)
+	if err != nil {
+		t.Fatalf("connect database: %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+
+	api, err := httpapi.New(db, time.Hour)
+	if err != nil {
+		t.Fatalf("initialize API: %v", err)
+	}
+	handler := api.Handler()
+
+	suffix := time.Now().UnixNano()
+	username := fmt.Sprintf("browser%d", suffix)
+	email := fmt.Sprintf("browser%d@example.test", suffix)
+	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM public.users WHERE email = $1`, email)
+	})
+
+	form := url.Values{
+		"username": {username},
+		"email":    {email},
+		"password": {"correct horse battery staple"},
+	}
+	register := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(form.Encode()))
+	register.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	register.Header.Set("Origin", "https://example.com")
+	register.Header.Set("HX-Request", "true")
+	registerResponse := httptest.NewRecorder()
+	handler.ServeHTTP(registerResponse, register)
+	if registerResponse.Code != http.StatusNoContent {
+		t.Fatalf("browser registration status = %d, body = %s", registerResponse.Code, registerResponse.Body.String())
+	}
+	if redirect := registerResponse.Header().Get("HX-Redirect"); redirect != "/todos" {
+		t.Fatalf("browser registration redirect = %q, want /todos", redirect)
+	}
+	cookies := registerResponse.Result().Cookies()
+	if len(cookies) != 1 {
+		t.Fatalf("browser registration cookie count = %d, want 1", len(cookies))
+	}
+	sessionCookie := cookies[0]
+	if !sessionCookie.Secure || !sessionCookie.HttpOnly || sessionCookie.SameSite != http.SameSiteLaxMode || sessionCookie.Value == "" {
+		t.Fatalf("browser registration cookie has unsafe attributes: %#v", sessionCookie)
+	}
+
+	todosPage := httptest.NewRequest(http.MethodGet, "/todos", nil)
+	todosPage.AddCookie(sessionCookie)
+	todosPageResponse := httptest.NewRecorder()
+	handler.ServeHTTP(todosPageResponse, todosPage)
+	if todosPageResponse.Code != http.StatusOK {
+		t.Fatalf("todos after registration status = %d, body = %s", todosPageResponse.Code, todosPageResponse.Body.String())
+	}
+	if !strings.Contains(todosPageResponse.Body.String(), username) {
+		t.Fatal("todos page does not show the newly registered session")
 	}
 }
