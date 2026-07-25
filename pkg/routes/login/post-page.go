@@ -14,10 +14,10 @@ func (routes *routes) postPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := httpx.ParseForm(w, r); err != nil {
-		routes.renderError(w, r, request{}, http.StatusBadRequest, "invalid form submission")
+		routes.renderError(w, r, loginRequest{}, http.StatusBadRequest, "invalid form submission")
 		return
 	}
-	input := request{Email: r.PostForm.Get("email"), Password: r.PostForm.Get("password")}
+	input := loginRequest{Email: r.PostForm.Get("email"), Password: r.PostForm.Get("password")}
 	prepare(&input)
 	result, err := routes.auth.Login(r.Context(), auth.Credentials{Email: input.Email, Password: input.Password})
 	if err != nil {

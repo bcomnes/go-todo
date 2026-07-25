@@ -10,6 +10,7 @@ import (
 
 	"github.com/bcomnes/go-todo/pkg/auth"
 	"github.com/bcomnes/go-todo/pkg/models"
+	"github.com/danielgtaylor/huma/v2"
 )
 
 const sessionCookieName = "go_todo_session"
@@ -58,6 +59,29 @@ func (sessions *Sessions) RequireAPI(next http.HandlerFunc) http.HandlerFunc {
 		}
 		ctx := context.WithValue(r.Context(), sessionContextKey{}, session)
 		next(w, r.WithContext(ctx))
+	}
+}
+
+// RequireHuma authenticates a Huma operation with a bearer token and attaches
+// its session to the operation context. It also documents runtime failures with
+// Huma's standard Problem Details response shape.
+func (sessions *Sessions) RequireHuma(api huma.API) func(huma.Context, func(huma.Context)) {
+	return func(ctx huma.Context, next func(huma.Context)) {
+		ctx.SetHeader("Cache-Control", "no-store")
+		plaintext, err := bearerValue(ctx.Header("Authorization"))
+		if err == nil {
+			var session auth.Session
+			session, err = sessions.auth.Authenticate(ctx.Context(), plaintext)
+			if err == nil {
+				next(huma.WithValue(ctx, sessionContextKey{}, session))
+				return
+			}
+		}
+		if errors.Is(err, auth.ErrUnauthorized) {
+			_ = huma.WriteErr(api, ctx, http.StatusUnauthorized, auth.ErrUnauthorized.Error())
+			return
+		}
+		_ = huma.WriteErr(api, ctx, http.StatusServiceUnavailable, auth.ErrUnavailable.Error())
 	}
 }
 
@@ -143,7 +167,11 @@ func (sessions *Sessions) authenticate(r *http.Request, extract tokenExtractor) 
 }
 
 func bearerToken(r *http.Request) (string, error) {
-	parts := strings.Fields(r.Header.Get("Authorization"))
+	return bearerValue(r.Header.Get("Authorization"))
+}
+
+func bearerValue(header string) (string, error) {
+	parts := strings.Fields(header)
 	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
 		return "", auth.ErrUnauthorized
 	}

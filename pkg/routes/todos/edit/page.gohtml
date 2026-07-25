@@ -1,0 +1,37 @@
+{{define "content" -}}
+<section class="todos-page todo-edit-page" aria-labelledby="todo-edit-title">
+  <header>
+    <p class="eyebrow">Edit todo</p>
+    <h1 id="todo-edit-title">Edit {{.Todo.Task}}</h1>
+    <p><a href="{{.EditForm.ReturnTo}}">Back without saving</a></p>
+  </header>
+  {{template "todo-edit-form" .EditForm}}
+</section>
+{{- end}}
+
+{{define "todo-edit-form" -}}
+<form class="todo-form todo-edit-form"
+  action="/todos/{{.TodoID}}"
+  method="post"
+  hx-post="/todos/{{.TodoID}}"
+  hx-target="{{.Target}}"
+  hx-swap="outerHTML">
+  <input type="hidden" name="return_to" value="{{.ReturnTo}}">
+  <fieldset>
+    <legend id="todo-edit-dialog-title">Edit todo</legend>
+    {{if .Error}}<p id="todo-edit-error" class="message message-error" role="alert">{{.Error}}</p>{{end}}
+    <div>
+      <label for="todo-edit-task-{{.TodoID}}">Task</label>
+      <input id="todo-edit-task-{{.TodoID}}" name="task" type="text" value="{{.Task}}" maxlength="500" required{{if .Error}} aria-invalid="true" aria-describedby="todo-edit-error"{{end}}>
+    </div>
+    <div>
+      <label for="todo-edit-note-{{.TodoID}}">Note <span>(optional)</span></label>
+      <textarea id="todo-edit-note-{{.TodoID}}" name="note" maxlength="5000" rows="5">{{.Note}}</textarea>
+    </div>
+    <div class="todo-form-actions">
+      <button type="submit">Save changes</button>
+      <a href="{{.ReturnTo}}" data-dialog-close>Cancel</a>
+    </div>
+  </fieldset>
+</form>
+{{- end}}

@@ -233,9 +233,42 @@
     font-weight: 700;
   }
 
-  .todo-edit-form {
-    padding-block: 1rem;
-    border-block: 1px solid var(--app-muted-border);
+  .todo-actions,
+  .todo-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .todo-detail-page {
+    max-inline-size: 52rem;
+  }
+
+  .todo-detail-page > header {
+    margin-block-end: 2rem;
+  }
+
+  #todo-edit-dialog {
+    inline-size: min(100% - 2rem, 36rem);
+    max-block-size: calc(100dvh - 2rem);
+    padding: clamp(1rem, 4vw, 2rem);
+    border: 1px solid var(--app-border);
+    border-radius: 0.5rem;
+  }
+
+  #todo-edit-dialog::backdrop {
+    background: rgb(0 0 0 / 45%);
+  }
+
+  .todo-edit-form,
+  .todo-edit-form legend,
+  .todo-edit-form .message {
+    margin-block-start: 0;
+  }
+
+  .todo-form-actions {
+    margin-block-start: 1.5rem;
   }
 
   [aria-busy="true"] {

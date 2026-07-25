@@ -18,9 +18,9 @@ For example, `login` registers `GET /login`, `POST /login`, and `POST /api/login
 
 Each feature package has a `routes.go` file with an explicit `Register` function. Larger features split handlers by method and surface, such as `get-page.go`, `post-page.go`, and `post-api.go`.
 
-The root `routes.go` is the complete route manifest. Go route packages are registered explicitly rather than discovered from the filesystem, so missing registrations fail review visibly and imports remain compile-time checked.
+The root `routes.go` is the complete route manifest. Go route packages are registered explicitly rather than discovered from the filesystem, so missing registrations fail review visibly and imports remain compile-time checked. It also creates the shared Huma API and authenticated operation group; feature packages register typed JSON operations with Huma while registering browser handlers directly on `http.ServeMux`.
 
-Page-owning packages keep `page.go` and `page.gohtml` next to their handlers. A page template contains both its full-page `content` definition and any directly renderable HTMX fragments.
+Page-owning packages keep `page.go` near their handlers. A small feature may colocate one `page.gohtml`; a larger feature may create asset/template-only page directories without creating Go subpackages, as `todos/{index,detail,edit}` does. Each template contains its full-page `content` definition and only the HTMX fragments it directly renders. Optional colocated `page.client.ts` files become stable directory-based entries, and relative imports shared by multiple entries are factored into ESM chunks. JSON operation files define Huma input/output structs and explicit operation metadata so request validation, response typing, JSON Schema, and OpenAPI stay synchronized.
 
 Cross-feature integration tests live at the root of this tree. Tests concerning only one feature should live in that feature package.
 

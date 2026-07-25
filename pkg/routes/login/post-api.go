@@ -1,34 +1,55 @@
 package login
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
 	"github.com/bcomnes/go-todo/pkg/auth"
-	"github.com/bcomnes/go-todo/pkg/httpx"
+	"github.com/danielgtaylor/huma/v2"
 )
 
-func (routes *routes) postAPI(w http.ResponseWriter, r *http.Request) {
-	var input request
-	if err := httpx.DecodeJSON(w, r, &input); err != nil {
-		httpx.WriteDecodeError(w, err)
-		return
-	}
-	prepare(&input)
-	result, err := routes.auth.Login(r.Context(), auth.Credentials{Email: input.Email, Password: input.Password})
+type postAPIInput struct {
+	Body loginRequest
+}
+
+type postAPIOutput struct {
+	CacheControl string `header:"Cache-Control"`
+	Body         auth.AuthResult
+}
+
+func (routes *routes) postAPI(ctx context.Context, input *postAPIInput) (*postAPIOutput, error) {
+	prepare(&input.Body)
+	result, err := routes.auth.Login(ctx, auth.Credentials{
+		Email:    input.Body.Email,
+		Password: input.Body.Password,
+	})
 	if err != nil {
 		switch {
 		case errors.Is(err, auth.ErrCapacity):
-			w.Header().Set("Retry-After", "1")
-			httpx.WriteError(w, http.StatusTooManyRequests, "authentication is busy; retry shortly")
+			return nil, huma.ErrorWithHeaders(
+				huma.Error429TooManyRequests("authentication is busy; retry shortly"),
+				http.Header{
+					"Cache-Control": {"no-store"},
+					"Retry-After":   {"1"},
+				},
+			)
 		case errors.Is(err, auth.ErrInvalidCredentials):
-			httpx.WriteError(w, http.StatusUnauthorized, auth.ErrInvalidCredentials.Error())
+			return nil, huma.ErrorWithHeaders(
+				huma.Error401Unauthorized(auth.ErrInvalidCredentials.Error()),
+				http.Header{"Cache-Control": {"no-store"}},
+			)
 		case errors.Is(err, auth.ErrUnavailable):
-			httpx.WriteError(w, http.StatusServiceUnavailable, auth.ErrUnavailable.Error())
+			return nil, huma.ErrorWithHeaders(
+				huma.Error503ServiceUnavailable(auth.ErrUnavailable.Error()),
+				http.Header{"Cache-Control": {"no-store"}},
+			)
 		default:
-			httpx.WriteError(w, http.StatusInternalServerError, auth.ErrTokenCreation.Error())
+			return nil, huma.ErrorWithHeaders(
+				huma.Error500InternalServerError(auth.ErrTokenCreation.Error()),
+				http.Header{"Cache-Control": {"no-store"}},
+			)
 		}
-		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, result)
+	return &postAPIOutput{CacheControl: "no-store", Body: result}, nil
 }

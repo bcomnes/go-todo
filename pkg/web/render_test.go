@@ -33,13 +33,14 @@ func TestRenderPage(t *testing.T) {
 		t.Fatalf("NewPage: %v", err)
 	}
 	var output bytes.Buffer
-	if err := page.RenderPage(&output, testPageData{Data: layout.Data{Title: "Test"}, Message: "Hello"}); err != nil {
+	if err := page.RenderPage(&output, testPageData{Data: layout.Data{Title: "Test", Scripts: []string{"/assets/pages/test.js"}}, Message: "Hello"}); err != nil {
 		t.Fatalf("RenderPage: %v", err)
 	}
 	for _, want := range []string{
 		"<!doctype html>",
 		`href="/assets/global.css"`,
 		`src="/assets/global.js"`,
+		`src="/assets/pages/test.js"`,
 		`<main id="main-content">`,
 		`id="card"`,
 		"Hello",
@@ -152,7 +153,12 @@ func TestNewPageRejectsInvalidTemplates(t *testing.T) {
 
 func TestAssets(t *testing.T) {
 	t.Parallel()
-	for _, name := range []string{"global.css", "global.js"} {
+	for _, name := range []string{
+		"global.css",
+		"global.js",
+		"pages/todos/index.js",
+		"pages/todos/detail.js",
+	} {
 		asset, err := fs.ReadFile(Assets(), name)
 		if err != nil {
 			t.Fatalf("ReadFile(%q): %v", name, err)

@@ -15,6 +15,8 @@ import (
 	todoroutes "github.com/bcomnes/go-todo/pkg/routes/todos"
 	todostore "github.com/bcomnes/go-todo/pkg/todos"
 	"github.com/bcomnes/go-todo/pkg/web"
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humago"
 )
 
 // New builds the complete browser, asset, health, and JSON route tree.
@@ -24,24 +26,43 @@ func New(
 	todoService *todostore.Service,
 ) (http.Handler, error) {
 	mux := http.NewServeMux()
+	config := huma.DefaultConfig("go-todo API", "1.0.0")
+	config.RejectUnknownQueryParameters = true
+	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
+		"bearer": {
+			Type:         "http",
+			Scheme:       "bearer",
+			BearerFormat: "opaque",
+		},
+	}
+	api := humago.NewWithPrefix(mux, "/api", config)
+	api.UseMiddleware(func(ctx huma.Context, next func(huma.Context)) {
+		ctx.SetHeader("Cache-Control", "no-store")
+		next(ctx)
+	})
+	protectedAPI := huma.NewGroup(api)
+	protectedAPI.UseMiddleware(sessions.RequireHuma(api))
+	protectedAPI.UseSimpleModifier(func(operation *huma.Operation) {
+		operation.Security = []map[string][]string{{"bearer": {}}}
+	})
+
 	assets := http.StripPrefix("/assets/", http.FileServer(http.FS(web.Assets())))
-	mux.Handle("GET /assets/global.css", cacheAssets(assets))
-	mux.Handle("GET /assets/global.js", cacheAssets(assets))
+	mux.Handle("GET /assets/", cacheAssets(assets))
 	health.Register(mux)
 	if err := landing.Register(mux, sessions); err != nil {
 		return nil, err
 	}
-	if err := login.Register(mux, authService, sessions); err != nil {
+	if err := login.Register(mux, api, authService, sessions); err != nil {
 		return nil, err
 	}
-	if err := register.Register(mux, authService, sessions); err != nil {
+	if err := register.Register(mux, api, authService, sessions); err != nil {
 		return nil, err
 	}
-	if err := account.Register(mux, sessions); err != nil {
+	if err := account.Register(mux, protectedAPI, sessions); err != nil {
 		return nil, err
 	}
-	logout.Register(mux, authService, sessions)
-	if err := todoroutes.Register(mux, todoService, sessions); err != nil {
+	logout.Register(mux, protectedAPI, authService, sessions)
+	if err := todoroutes.Register(mux, protectedAPI, todoService, sessions); err != nil {
 		return nil, err
 	}
 	return mux, nil

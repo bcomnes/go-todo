@@ -10,6 +10,6 @@
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "types": []
   },
-  "include": ["pkg/web/**/*.ts"],
+  "include": ["pkg/web/**/*.ts", "pkg/routes/**/*.client.ts"],
   "exclude": ["node_modules", "pkg/web/dist"]
 }

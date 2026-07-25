@@ -16,7 +16,7 @@
   "type": "module",
   "scripts": {
     "build": "npm run build:js && npm run build:css",
-    "build:js": "esbuild pkg/web/global.client.ts --bundle --format=esm --minify --outfile=pkg/web/dist/global.js",
+    "build:js": "node scripts/build-client.js",
     "build:css": "esbuild pkg/web/global.css --bundle --minify --outfile=pkg/web/dist/global.css",
     "test": "npm run test:tsc && npm run build",
     "test:tsc": "tsc --project tsconfig.json"

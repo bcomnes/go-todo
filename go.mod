@@ -3,6 +3,7 @@ module github.com/bcomnes/go-todo
 go 1.26.0
 
 require (
+	github.com/danielgtaylor/huma/v2 v2.39.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/joho/godotenv v1.5.1
 )
@@ -15,7 +16,7 @@ tool (
 require (
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/air-verse/air v1.67.2 // indirect
-	github.com/andybalholm/brotli v1.2.0 // indirect
+	github.com/andybalholm/brotli v1.2.1 // indirect
 	github.com/bcomnes/gostgrator v1.0.7 // indirect
 	github.com/bep/godartsass/v2 v2.5.0 // indirect
 	github.com/bep/golibsass v1.2.0 // indirect

@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"reflect"
 	"strconv"
 
 	todostore "github.com/bcomnes/go-todo/pkg/todos"
+	"github.com/danielgtaylor/huma/v2"
 )
 
 var (
@@ -67,6 +69,13 @@ func parseTodoID(raw string) (int64, error) {
 type nullableString struct {
 	Set   bool
 	Value *string
+}
+
+// Schema describes the nullable string represented by nullableString on the wire.
+func (value nullableString) Schema(registry huma.Registry) *huma.Schema {
+	schema := registry.Schema(reflect.TypeFor[string](), true, "")
+	schema.Nullable = true
+	return schema
 }
 
 func (value *nullableString) UnmarshalJSON(data []byte) error {

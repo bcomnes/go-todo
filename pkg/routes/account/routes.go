@@ -5,6 +5,7 @@ import (
 
 	"github.com/bcomnes/go-todo/pkg/httpx"
 	"github.com/bcomnes/go-todo/pkg/web"
+	"github.com/danielgtaylor/huma/v2"
 )
 
 type routes struct {
@@ -12,14 +13,22 @@ type routes struct {
 	page     *web.Page
 }
 
-// Register adds the authenticated account page and JSON endpoint to mux.
-func Register(mux *http.ServeMux, sessions *httpx.Sessions) error {
+// Register adds the authenticated account page to mux and the JSON operation to api.
+func Register(mux *http.ServeMux, api huma.API, sessions *httpx.Sessions) error {
 	page, err := newPage()
 	if err != nil {
 		return err
 	}
 	routes := &routes{sessions: sessions, page: page}
 	mux.HandleFunc("GET /account", sessions.RequirePage(routes.getPage))
-	mux.HandleFunc("GET /api/account", sessions.RequireAPI(routes.getAPI))
+	huma.Register(api, huma.Operation{
+		OperationID:   "get-account",
+		Method:        http.MethodGet,
+		Path:          "/account",
+		Summary:       "Get the current account",
+		Tags:          []string{"Account"},
+		DefaultStatus: http.StatusOK,
+		Errors:        []int{http.StatusUnauthorized, http.StatusServiceUnavailable},
+	}, routes.getAPI)
 	return nil
 }

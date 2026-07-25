@@ -1,6 +1,8 @@
 .PHONY: all build deps dev help test validate web-build web-typecheck \
         migrate-up migrate-down migrate-list migrate-create
 
+WEB_SOURCES := $(shell find pkg/web pkg/routes -type f -name '*.ts') pkg/web/global.css scripts/build-client.js
+
 help: ## Show this help.
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {sub("\\\\n",sprintf("\n%22c"," "), $$2);printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
@@ -16,7 +18,7 @@ deps: node_modules/.package-lock.json ## Resolve and verify project dependencies
 node_modules/.package-lock.json: package.json package-lock.json
 	npm ci
 
-.web-assets.stamp: package.json package-lock.json tsconfig.json pkg/web/global.client.ts pkg/web/global.css | node_modules/.package-lock.json
+.web-assets.stamp: package.json package-lock.json tsconfig.json $(WEB_SOURCES) | node_modules/.package-lock.json
 	npm run build
 	@touch $@
 

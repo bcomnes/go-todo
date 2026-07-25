@@ -6,6 +6,7 @@ import (
 
 	"github.com/bcomnes/go-todo/pkg/auth"
 	"github.com/bcomnes/go-todo/pkg/httpx"
+	"github.com/danielgtaylor/huma/v2"
 )
 
 type routes struct {
@@ -13,9 +14,17 @@ type routes struct {
 	sessions *httpx.Sessions
 }
 
-// Register adds authenticated browser and JSON logout actions to mux.
-func Register(mux *http.ServeMux, authService *auth.Service, sessions *httpx.Sessions) {
+// Register adds the authenticated browser logout action to mux and the JSON operation to api.
+func Register(mux *http.ServeMux, api huma.API, authService *auth.Service, sessions *httpx.Sessions) {
 	routes := &routes{auth: authService, sessions: sessions}
 	mux.HandleFunc("POST /logout", sessions.RequirePage(routes.postPage))
-	mux.HandleFunc("POST /api/logout", sessions.RequireAPI(routes.postAPI))
+	huma.Register(api, huma.Operation{
+		OperationID:   "logout",
+		Method:        http.MethodPost,
+		Path:          "/logout",
+		Summary:       "Log out",
+		Tags:          []string{"Authentication"},
+		DefaultStatus: http.StatusNoContent,
+		Errors:        []int{http.StatusUnauthorized},
+	}, routes.postAPI)
 }

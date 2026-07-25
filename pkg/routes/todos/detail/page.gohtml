@@ -1,0 +1,62 @@
+{{define "content" -}}
+{{template "todo-detail" .}}
+
+<dialog id="todo-edit-dialog" aria-labelledby="todo-edit-dialog-title">
+  <div id="todo-edit-content">
+    <h2 id="todo-edit-dialog-title">Edit todo</h2>
+  </div>
+</dialog>
+{{- end}}
+
+{{define "todo-detail" -}}
+<section id="todo-detail" class="todos-page todo-detail-page" aria-labelledby="todo-detail-title">
+  <header>
+    <p class="eyebrow">Todo detail</p>
+    <h1 id="todo-detail-title">{{.Todo.Task}}</h1>
+    <p><a href="/todos">Back to todos</a></p>
+  </header>
+  {{if .Error}}<p class="message message-error" role="alert">{{.Error}}</p>{{end}}
+  {{if .Notice}}<p class="message message-notice" role="status">{{.Notice}}</p>{{end}}
+  {{template "todo-detail-item" .Todo}}
+</section>
+{{- end}}
+
+{{define "todo-detail-item" -}}
+<article id="todo-{{.ID}}" class="todo-item todo-detail" data-completed="{{.Done}}" aria-labelledby="todo-title-{{.ID}}">
+  <header>
+    <h2 id="todo-title-{{.ID}}">{{.Task}}</h2>
+    {{if .Done}}
+      <p class="todo-status" role="status">Completed</p>
+    {{else}}
+      <p class="todo-status" role="status">Not completed</p>
+    {{end}}
+  </header>
+
+  <section aria-labelledby="todo-note-title-{{.ID}}">
+    <h3 id="todo-note-title-{{.ID}}">Note</h3>
+    {{with .Note}}<p>{{.}}</p>{{else}}<p><em>No note.</em></p>{{end}}
+  </section>
+
+  <div class="todo-actions">
+    <form action="/todos/{{.ID}}/toggle" method="post">
+      <input type="hidden" name="return_to" value="/todos/{{.ID}}">
+      {{if .Done}}
+        <button type="submit" aria-label="Mark {{.Task}} as not completed">Mark incomplete</button>
+      {{else}}
+        <button type="submit" aria-label="Mark {{.Task}} as completed">Mark complete</button>
+      {{end}}
+    </form>
+
+    <a class="button-link quiet-button"
+      href="/todos/{{.ID}}/edit"
+      hx-get="/todos/{{.ID}}/edit"
+      hx-target="#todo-edit-content"
+      hx-swap="innerHTML">Edit</a>
+
+    <form action="/todos/{{.ID}}/delete" method="post">
+      <input type="hidden" name="return_to" value="/todos">
+      <button type="submit" aria-label="Delete {{.Task}}">Delete</button>
+    </form>
+  </div>
+</article>
+{{- end}}

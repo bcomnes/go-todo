@@ -14,6 +14,7 @@ var source string
 type Data struct {
 	Title       string
 	CurrentUser *models.User
+	Scripts     []string
 }
 
 // Source returns the shared document layout template.

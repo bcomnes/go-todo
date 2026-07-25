@@ -7,6 +7,7 @@
   <title>{{if .Title}}{{.Title}} · {{end}}go-todo</title>
   <link rel="stylesheet" href="/assets/global.css">
   <script type="module" src="/assets/global.js"></script>
+  {{range .Scripts}}<script type="module" src="{{.}}"></script>{{end}}
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>

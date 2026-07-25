@@ -20,7 +20,16 @@ kill_delay = 500000000
 [[build.rules]]
 name = "web-assets"
 cmd = "npm run build"
-include_file = ["pkg/web/global.client.ts", "pkg/web/global.css"]
+include_dir = ["pkg/web", "pkg/routes"]
+include_ext = ["ts"]
+include_file = ["pkg/web/global.css"]
+exclude_regex = ["pkg/web/dist/"]
+delay = 100
+
+[[build.rules]]
+name = "web-build-script"
+cmd = "npm run build"
+include_file = ["scripts/build-client.js"]
 delay = 100
 
 [log]

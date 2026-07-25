@@ -1,24 +1,58 @@
 package todos
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
 	"github.com/bcomnes/go-todo/pkg/auth"
-	"github.com/bcomnes/go-todo/pkg/httpx"
+	"github.com/bcomnes/go-todo/pkg/models"
 	todostore "github.com/bcomnes/go-todo/pkg/todos"
+	"github.com/danielgtaylor/huma/v2"
 )
 
+type listAPIInput struct {
+	Limit  int `query:"limit" default:"20" minimum:"1" maximum:"100" doc:"Maximum number of todos to return"`
+	Offset int `query:"offset" default:"0" minimum:"0" doc:"Number of todos to skip"`
+}
+
+type listAPIOutput struct {
+	CacheControl string        `header:"Cache-Control"`
+	Body         []models.Todo `nameHint:"TodoList"`
+}
+
+type todoIDAPIInput struct {
+	ID int64 `path:"id" minimum:"1" doc:"Todo identifier"`
+}
+
+type todoAPIOutput struct {
+	CacheControl string      `header:"Cache-Control"`
+	Body         models.Todo `nameHint:"Todo"`
+}
+
 type createAPIRequest struct {
-	Task string  `json:"task"`
-	Done bool    `json:"done"`
-	Note *string `json:"note"`
+	Task string  `json:"task" minLength:"1" maxLength:"500" doc:"Task description"`
+	Done bool    `json:"done,omitempty" doc:"Whether the todo is complete"`
+	Note *string `json:"note,omitempty" nullable:"true" maxLength:"5000" doc:"Optional todo notes"`
+}
+
+type createAPIInput struct {
+	Body createAPIRequest
 }
 
 type updateAPIRequest struct {
-	Task *string        `json:"task"`
-	Done *bool          `json:"done"`
-	Note nullableString `json:"note"`
+	Task *string        `json:"task,omitempty" minLength:"1" maxLength:"500" doc:"Replacement task description"`
+	Done *bool          `json:"done,omitempty" doc:"Replacement completion state"`
+	Note nullableString `json:"note,omitempty" maxLength:"5000" doc:"Replacement notes; null clears the note"`
+}
+
+type updateAPIInput struct {
+	ID   int64            `path:"id" minimum:"1" doc:"Todo identifier"`
+	Body updateAPIRequest `minProperties:"1"`
+}
+
+type deleteAPIOutput struct {
+	CacheControl string `header:"Cache-Control"`
 }
 
 func (input updateAPIRequest) serviceInput() todostore.UpdateInput {
@@ -30,121 +64,88 @@ func (input updateAPIRequest) serviceInput() todostore.UpdateInput {
 	}
 }
 
-func (routes *routes) listAPI(w http.ResponseWriter, r *http.Request) {
-	userID, ok := routes.currentAPIUserID(w, r)
-	if !ok {
-		return
-	}
-	page, err := parsePagination(r.URL.Query())
+func (routes *routes) listAPI(ctx context.Context, input *listAPIInput) (*listAPIOutput, error) {
+	userID, err := routes.currentAPIUserID(ctx)
 	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
-		return
+		return nil, err
 	}
-	items, err := routes.service.List(r.Context(), userID, page.Limit, page.Offset)
+	items, err := routes.service.List(ctx, userID, input.Limit, input.Offset)
 	if err != nil {
-		writeAPIServiceError(w, err, "failed to list todos")
-		return
+		return nil, todoAPIServiceError(err, "failed to list todos")
 	}
-	httpx.WriteJSON(w, http.StatusOK, items)
+	return &listAPIOutput{CacheControl: "no-store", Body: items}, nil
 }
 
-func (routes *routes) createAPI(w http.ResponseWriter, r *http.Request) {
-	userID, ok := routes.currentAPIUserID(w, r)
-	if !ok {
-		return
+func (routes *routes) createAPI(ctx context.Context, input *createAPIInput) (*todoAPIOutput, error) {
+	userID, err := routes.currentAPIUserID(ctx)
+	if err != nil {
+		return nil, err
 	}
-	var input createAPIRequest
-	if err := httpx.DecodeJSON(w, r, &input); err != nil {
-		httpx.WriteDecodeError(w, err)
-		return
-	}
-	todo, err := routes.service.Create(r.Context(), userID, todostore.CreateInput{
-		Task: input.Task,
-		Done: input.Done,
-		Note: input.Note,
+	todo, err := routes.service.Create(ctx, userID, todostore.CreateInput{
+		Task: input.Body.Task,
+		Done: input.Body.Done,
+		Note: input.Body.Note,
 	})
 	if err != nil {
-		writeAPIServiceError(w, err, "failed to create todo")
-		return
+		return nil, todoAPIServiceError(err, "failed to create todo")
 	}
-	httpx.WriteJSON(w, http.StatusCreated, todo)
+	return &todoAPIOutput{CacheControl: "no-store", Body: todo}, nil
 }
 
-func (routes *routes) getAPI(w http.ResponseWriter, r *http.Request) {
-	userID, ok := routes.currentAPIUserID(w, r)
+func (routes *routes) getAPI(ctx context.Context, input *todoIDAPIInput) (*todoAPIOutput, error) {
+	userID, err := routes.currentAPIUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	todo, err := routes.service.Get(ctx, userID, input.ID)
+	if err != nil {
+		return nil, todoAPIServiceError(err, "failed to get todo")
+	}
+	return &todoAPIOutput{CacheControl: "no-store", Body: todo}, nil
+}
+
+func (routes *routes) updateAPI(ctx context.Context, input *updateAPIInput) (*todoAPIOutput, error) {
+	userID, err := routes.currentAPIUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	todo, err := routes.service.Update(ctx, userID, input.ID, input.Body.serviceInput())
+	if err != nil {
+		return nil, todoAPIServiceError(err, "failed to update todo")
+	}
+	return &todoAPIOutput{CacheControl: "no-store", Body: todo}, nil
+}
+
+func (routes *routes) deleteAPI(ctx context.Context, input *todoIDAPIInput) (*deleteAPIOutput, error) {
+	userID, err := routes.currentAPIUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := routes.service.Delete(ctx, userID, input.ID); err != nil {
+		return nil, todoAPIServiceError(err, "failed to delete todo")
+	}
+	return &deleteAPIOutput{CacheControl: "no-store"}, nil
+}
+
+func (routes *routes) currentAPIUserID(ctx context.Context) (int64, error) {
+	session, ok := routes.sessions.Current(ctx)
 	if !ok {
-		return
+		return 0, withNoStore(huma.Error401Unauthorized(auth.ErrUnauthorized.Error()))
 	}
-	id, err := parseTodoID(r.PathValue("id"))
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	todo, err := routes.service.Get(r.Context(), userID, id)
-	if err != nil {
-		writeAPIServiceError(w, err, "failed to get todo")
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, todo)
+	return session.User.ID, nil
 }
 
-func (routes *routes) updateAPI(w http.ResponseWriter, r *http.Request) {
-	userID, ok := routes.currentAPIUserID(w, r)
-	if !ok {
-		return
-	}
-	id, err := parseTodoID(r.PathValue("id"))
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	var input updateAPIRequest
-	if err := httpx.DecodeJSON(w, r, &input); err != nil {
-		httpx.WriteDecodeError(w, err)
-		return
-	}
-	todo, err := routes.service.Update(r.Context(), userID, id, input.serviceInput())
-	if err != nil {
-		writeAPIServiceError(w, err, "failed to update todo")
-		return
-	}
-	httpx.WriteJSON(w, http.StatusOK, todo)
-}
-
-func (routes *routes) deleteAPI(w http.ResponseWriter, r *http.Request) {
-	userID, ok := routes.currentAPIUserID(w, r)
-	if !ok {
-		return
-	}
-	id, err := parseTodoID(r.PathValue("id"))
-	if err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	if err := routes.service.Delete(r.Context(), userID, id); err != nil {
-		writeAPIServiceError(w, err, "failed to delete todo")
-		return
-	}
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (routes *routes) currentAPIUserID(w http.ResponseWriter, r *http.Request) (int64, bool) {
-	session, ok := routes.sessions.Current(r.Context())
-	if !ok {
-		httpx.WriteError(w, http.StatusUnauthorized, auth.ErrUnauthorized.Error())
-		return 0, false
-	}
-	return session.User.ID, true
-}
-
-func writeAPIServiceError(w http.ResponseWriter, err error, fallback string) {
+func todoAPIServiceError(err error, fallback string) error {
 	switch {
 	case errors.Is(err, todostore.ErrNotFound):
-		httpx.WriteError(w, http.StatusNotFound, todostore.ErrNotFound.Error())
+		return withNoStore(huma.Error404NotFound(todostore.ErrNotFound.Error()))
 	case todostore.IsValidationError(err):
-		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+		return withNoStore(huma.Error400BadRequest(err.Error()))
 	default:
-		httpx.WriteError(w, http.StatusInternalServerError, fallback)
+		return withNoStore(huma.Error500InternalServerError(fallback))
 	}
+}
+
+func withNoStore(err error) error {
+	return huma.ErrorWithHeaders(err, http.Header{"Cache-Control": {"no-store"}})
 }

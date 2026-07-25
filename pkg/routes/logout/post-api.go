@@ -1,32 +1,39 @@
 package logout
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
 	"github.com/bcomnes/go-todo/pkg/auth"
-	"github.com/bcomnes/go-todo/pkg/httpx"
+	"github.com/danielgtaylor/huma/v2"
 )
 
-func (routes *routes) postAPI(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
-	if r.Header.Get("Authorization") == "" && !routes.sessions.HasSameOrigin(r) {
-		httpx.WriteError(w, http.StatusForbidden, "forbidden")
-		return
-	}
-	session, ok := routes.sessions.Current(r.Context())
+type postAPIInput struct{}
+
+type postAPIOutput struct {
+	CacheControl string `header:"Cache-Control"`
+}
+
+func (routes *routes) postAPI(ctx context.Context, _ *postAPIInput) (*postAPIOutput, error) {
+	session, ok := routes.sessions.Current(ctx)
 	if !ok {
-		httpx.WriteError(w, http.StatusUnauthorized, auth.ErrUnauthorized.Error())
-		return
+		return nil, huma.ErrorWithHeaders(
+			huma.Error401Unauthorized(auth.ErrUnauthorized.Error()),
+			http.Header{"Cache-Control": {"no-store"}},
+		)
 	}
-	if err := routes.auth.Revoke(r.Context(), session); err != nil {
+	if err := routes.auth.Revoke(ctx, session); err != nil {
 		if errors.Is(err, auth.ErrUnauthorized) {
-			httpx.WriteError(w, http.StatusUnauthorized, auth.ErrUnauthorized.Error())
-			return
+			return nil, huma.ErrorWithHeaders(
+				huma.Error401Unauthorized(auth.ErrUnauthorized.Error()),
+				http.Header{"Cache-Control": {"no-store"}},
+			)
 		}
-		httpx.WriteError(w, http.StatusInternalServerError, "failed to revoke token")
-		return
+		return nil, huma.ErrorWithHeaders(
+			huma.Error500InternalServerError("failed to revoke token"),
+			http.Header{"Cache-Control": {"no-store"}},
+		)
 	}
-	routes.sessions.ClearCookie(w)
-	w.WriteHeader(http.StatusNoContent)
+	return &postAPIOutput{CacheControl: "no-store"}, nil
 }

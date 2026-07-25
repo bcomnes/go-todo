@@ -1,4 +1,5 @@
 import htmx from 'htmx.org'
+import { requestDetail } from './lib/htmx-events.js'
 
 declare global {
   interface Window {
@@ -6,10 +7,7 @@ declare global {
   }
 }
 
-interface HtmxRequestDetail {
-  elt?: Element
-  xhr?: XMLHttpRequest
-}
+
 
 interface HtmxBeforeSwapDetail {
   isError: boolean
@@ -19,8 +17,7 @@ interface HtmxBeforeSwapDetail {
 
 window.htmx = htmx
 
-const requestDetail = (event: Event): HtmxRequestDetail | undefined =>
-  (event as CustomEvent<HtmxRequestDetail>).detail
+
 
 const requestElement = (event: Event): Element | undefined =>
   requestDetail(event)?.elt
@@ -37,6 +34,8 @@ document.addEventListener('htmx:beforeSwap', (event) => {
 document.addEventListener('htmx:beforeRequest', (event) => {
   requestElement(event)?.setAttribute('aria-busy', 'true')
 })
+
+
 
 document.addEventListener('htmx:afterRequest', (event) => {
   const detail = requestDetail(event)
