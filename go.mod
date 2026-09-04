@@ -11,6 +11,7 @@ require (
 tool (
 	github.com/air-verse/air
 	github.com/bcomnes/gostgrator/pg
+	github.com/bcomnes/goversion/v2
 )
 
 require (
@@ -18,6 +19,7 @@ require (
 	github.com/air-verse/air v1.67.2 // indirect
 	github.com/andybalholm/brotli v1.2.2 // indirect
 	github.com/bcomnes/gostgrator v1.0.7 // indirect
+	github.com/bcomnes/goversion/v2 v2.4.1 // indirect
 	github.com/bep/godartsass/v2 v2.5.0 // indirect
 	github.com/bep/golibsass v1.2.0 // indirect
 	github.com/bits-and-blooms/bitset v1.24.5 // indirect
@@ -37,6 +39,7 @@ require (
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/tdewolff/parse/v2 v2.8.12 // indirect
+	golang.org/x/mod v0.40.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
